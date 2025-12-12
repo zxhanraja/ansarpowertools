@@ -491,140 +491,141 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
               </table>
             </div>
           </div>
+        </div>
       )}
 
-          {/* Categories Tab */}
-          {activeTab === 'categories' && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <FolderTree className="text-orange-600" />
-                  Manage Categories
-                </h3>
-                <form onSubmit={handleAddCategory} className="flex gap-3 mb-8">
-                  <input
-                    type="text"
-                    placeholder="New Category Name (e.g. Spare Parts)"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900"
-                  />
-                  <button
-                    type="submit"
-                    disabled={categoryLoading}
-                    className="bg-gray-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 disabled:opacity-50"
-                  >
-                    {categoryLoading ? 'Adding...' : 'Add'}
-                  </button>
-                </form>
+      {/* Categories Tab */}
+      {activeTab === 'categories' && (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FolderTree className="text-orange-600" />
+              Manage Categories
+            </h3>
+            <form onSubmit={handleAddCategory} className="flex gap-3 mb-8">
+              <input
+                type="text"
+                placeholder="New Category Name (e.g. Spare Parts)"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900"
+              />
+              <button
+                type="submit"
+                disabled={categoryLoading}
+                className="bg-gray-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 disabled:opacity-50"
+              >
+                {categoryLoading ? 'Adding...' : 'Add'}
+              </button>
+            </form>
 
-                <div className="space-y-2">
-                  {categories.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No categories found.</p>
-                  ) : (
-                    categories.map(cat => (
-                      <div key={cat.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 group">
-                        <span className="font-medium text-gray-700">{cat.name}</span>
-                        <button
-                          onClick={() => handleDeleteCategory(cat.id)}
-                          disabled={deletingCategoryId === cat.id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md transition-colors disabled:opacity-100 flex items-center gap-1.5"
-                          title="Delete Category"
-                        >
-                          {deletingCategoryId === cat.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                          <span className="text-xs font-bold">Delete</span>
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+            <div className="space-y-2">
+              {categories.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No categories found.</p>
+              ) : (
+                categories.map(cat => (
+                  <div key={cat.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 group">
+                    <span className="font-medium text-gray-700">{cat.name}</span>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      disabled={deletingCategoryId === cat.id}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md transition-colors disabled:opacity-100 flex items-center gap-1.5"
+                      title="Delete Category"
+                    >
+                      {deletingCategoryId === cat.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      <span className="text-xs font-bold">Delete</span>
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-          )}
-
-          {/* Shipment Modal */}
-          {selectedOrder && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2"><Truck className="text-orange-600" /> Ship Order</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Courier Service</label>
-                    <select value={courierInput} onChange={(e) => setCourierInput(e.target.value)} className="w-full bg-white border-gray-200 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"><option value="FedEx">FedEx Express</option><option value="BlueDart">BlueDart</option><option value="Delhivery">Delhivery</option><option value="DTDC">DTDC</option></select>
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
-                    <input type="text" value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} placeholder="e.g. 1234567890" className="w-full bg-white border-gray-200 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
-                  </div>
-                  <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
-                    <button onClick={() => setSelectedOrder(null)} className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50">Cancel</button>
-                    <button onClick={() => handleShipOrder(selectedOrder)} className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-900 text-white font-bold rounded-lg hover:bg-gray-800">Confirm</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Add/Edit Product Modal */}
-          {isProductModalOpen && (
-            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
-                <div className="px-4 py-3 sm:px-8 sm:py-5 border-b border-gray-200 flex justify-between items-center bg-white">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="bg-orange-100 p-1.5 sm:p-2 rounded-lg">{isEditing ? <Pencil className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />}</div>
-                    <div><h3 className="text-lg sm:text-xl font-bold text-gray-900">{isEditing ? 'Edit Product' : 'Add New Product'}</h3></div>
-                  </div>
-                  <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full"><X className="h-5 w-5" /></button>
-                </div>
-                <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar bg-white">
-                  <form id="productForm" onSubmit={handleSaveProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                    <div className="space-y-4 sm:space-y-6">
-                      <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><AlignLeft className="h-4 w-4 text-orange-500" /> Product Details</div>
-                      <div className="space-y-3 sm:space-y-4">
-                        <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Product Name *</label><input required type="text" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs sm:text-sm font-medium text-gray-700">Category</label>
-                          <div className="relative">
-                            <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 appearance-none">
-                              <option value="">Select Category...</option>
-                              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
-                            <Layers className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Description</label><textarea required value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 h-28 sm:h-32 resize-none" /></div>
-                      </div>
-                    </div>
-                    <div className="space-y-6 sm:space-y-8">
-                      <div className="space-y-4 sm:space-y-6">
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><Tag className="h-4 w-4 text-orange-500" /> Pricing & Inventory</div>
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                          <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Price (INR)</label><input required type="number" min="0" value={productForm.price || ''} onChange={e => setProductForm({ ...productForm, price: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
-                          <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Stock Qty</label><input required type="number" min="0" value={productForm.stock || ''} onChange={e => setProductForm({ ...productForm, stock: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
-                        </div>
-                        <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">SKU</label><input type="text" value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" placeholder="Auto-generated" /></div>
-                      </div>
-                      <div className="space-y-3 sm:space-y-4">
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><ImageIcon className="h-4 w-4 text-orange-500" /> Product Image</div>
-                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-6 hover:bg-gray-50 text-center bg-white transition-colors">
-                          {uploadingImage ? <Loader2 className="h-8 w-8 text-orange-600 animate-spin mx-auto" /> :
-                            productForm.imageUrl ? (
-                              <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200"><img src={productForm.imageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"><label className="cursor-pointer bg-white px-3 py-1 rounded text-sm font-bold">Change<input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label></div></div>
-                            ) : (
-                              <label className="cursor-pointer flex flex-col items-center"><Upload className="h-6 w-6 text-gray-400 mb-2" /><span className="text-sm font-bold text-gray-700">Upload Image</span><input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label>
-                            )}
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-                <div className="p-4 sm:p-6 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
-                  <button onClick={() => setIsProductModalOpen(false)} className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button type="submit" form="productForm" disabled={uploadingImage} className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-2.5 text-sm sm:text-base bg-gray-900 text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">{isEditing ? 'Update Product' : 'Save Product'}</button>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      );
+      )}
+
+      {/* Shipment Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2"><Truck className="text-orange-600" /> Ship Order</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Courier Service</label>
+                <select value={courierInput} onChange={(e) => setCourierInput(e.target.value)} className="w-full bg-white border-gray-200 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"><option value="FedEx">FedEx Express</option><option value="BlueDart">BlueDart</option><option value="Delhivery">Delhivery</option><option value="DTDC">DTDC</option></select>
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
+                <input type="text" value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} placeholder="e.g. 1234567890" className="w-full bg-white border-gray-200 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
+              </div>
+              <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
+                <button onClick={() => setSelectedOrder(null)} className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onClick={() => handleShipOrder(selectedOrder)} className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-900 text-white font-bold rounded-lg hover:bg-gray-800">Confirm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Product Modal */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 sm:px-8 sm:py-5 border-b border-gray-200 flex justify-between items-center bg-white">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-orange-100 p-1.5 sm:p-2 rounded-lg">{isEditing ? <Pencil className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />}</div>
+                <div><h3 className="text-lg sm:text-xl font-bold text-gray-900">{isEditing ? 'Edit Product' : 'Add New Product'}</h3></div>
+              </div>
+              <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar bg-white">
+              <form id="productForm" onSubmit={handleSaveProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><AlignLeft className="h-4 w-4 text-orange-500" /> Product Details</div>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Product Name *</label><input required type="text" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700">Category</label>
+                      <div className="relative">
+                        <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 appearance-none">
+                          <option value="">Select Category...</option>
+                          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                        <Layers className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Description</label><textarea required value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 h-28 sm:h-32 resize-none" /></div>
+                  </div>
+                </div>
+                <div className="space-y-6 sm:space-y-8">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><Tag className="h-4 w-4 text-orange-500" /> Pricing & Inventory</div>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Price (INR)</label><input required type="number" min="0" value={productForm.price || ''} onChange={e => setProductForm({ ...productForm, price: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
+                      <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Stock Qty</label><input required type="number" min="0" value={productForm.stock || ''} onChange={e => setProductForm({ ...productForm, stock: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
+                    </div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">SKU</label><input type="text" value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" placeholder="Auto-generated" /></div>
+                  </div>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><ImageIcon className="h-4 w-4 text-orange-500" /> Product Image</div>
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-6 hover:bg-gray-50 text-center bg-white transition-colors">
+                      {uploadingImage ? <Loader2 className="h-8 w-8 text-orange-600 animate-spin mx-auto" /> :
+                        productForm.imageUrl ? (
+                          <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200"><img src={productForm.imageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"><label className="cursor-pointer bg-white px-3 py-1 rounded text-sm font-bold">Change<input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label></div></div>
+                        ) : (
+                          <label className="cursor-pointer flex flex-col items-center"><Upload className="h-6 w-6 text-gray-400 mb-2" /><span className="text-sm font-bold text-gray-700">Upload Image</span><input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="p-4 sm:p-6 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+              <button onClick={() => setIsProductModalOpen(false)} className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+              <button type="submit" form="productForm" disabled={uploadingImage} className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-2.5 text-sm sm:text-base bg-gray-900 text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">{isEditing ? 'Update Product' : 'Save Product'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
