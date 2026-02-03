@@ -152,183 +152,170 @@ export const Home: React.FC = () => {
   }
 
   return (
-    <div className="space-y-16 pb-12">
-      {/* Premium Hero Section */}
-      <div className="relative bg-gray-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl min-h-[450px] sm:min-h-[500px] md:min-h-[550px] flex items-center group">
-        {/* Background */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gray-900 z-10"></div>
-          <img
-            src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=60&w=1000"
-            alt="Industrial Background"
-            className="w-full h-full object-cover opacity-20"
-            loading="eager"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-900/95 to-gray-900/50 z-20"></div>
+    <div className="space-y-6 sm:space-y-12 lg:space-y-20 pb-20 animate-fade-in">
+      <div id="products" className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+        {/* Adaptive Control Bar: Integrated Pod for Mobile, Sidebar for Desktop */}
+        <div className="w-full lg:w-72 flex-shrink-0 lg:sticky lg:top-28 z-30 transition-all order-last lg:order-first">
+          <div className="flex flex-col gap-5 lg:gap-8 transition-all">
+
+            {/* Search Box Pod */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-[2.5rem] shadow-xl shadow-black/[0.03] border border-gray-100 dark:border-gray-800/50 transition-all">
+              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em] mb-4 ml-1">
+                <Search size={12} className="text-orange-500" /> Search Catalog
+              </div>
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="Find your tools..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-4 border-none rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-sm bg-gray-50 dark:bg-gray-800/80 text-gray-900 dark:text-white transition-all font-bold placeholder:text-gray-400"
+                />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-orange-500 transition-colors" />
+              </div>
+            </div>
+
+            {/* Consolidated Product Tools Pod */}
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-[2.5rem] shadow-xl shadow-black/[0.03] border border-gray-100 dark:border-gray-800/50 transition-all">
+              <div className="space-y-6">
+                {/* Catalog Filters */}
+                <div>
+                  <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em] mb-3 ml-1">
+                    <Filter size={10} className="text-orange-500" /> Equipment Categories
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setSelectedCategory('All')}
+                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === 'All'
+                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-800'
+                        }`}
+                    >
+                      All Tools
+                    </button>
+                    {categories.map(category => (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedCategory(category.name)}
+                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === category.name
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-800'
+                          }`}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Technical Specialists */}
+                <div className="pt-4 border-t border-gray-50 dark:border-gray-800">
+                  <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.25em] mb-3 ml-1">
+                    <Flashlight size={10} className="text-orange-500" /> Machine Specialist Tags
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Armature', 'Gears', 'Stator', 'Field Coil', 'Carbon Brush', 'Switch', 'Bearing'].map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => setSearchQuery(tag)}
+                        className="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-[9px] font-black text-gray-500/80 dark:text-gray-400 uppercase tracking-widest hover:border-orange-500/50 border border-transparent transition-all"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Content Container */}
-        <div className="relative z-30 w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-10 md:px-12 md:py-16 flex flex-col md:flex-row items-center gap-8 md:gap-12">
-
-          {/* Left: Text Content */}
-          <div className="w-full md:w-1/2 pt-6 sm:pt-8 md:pt-0 text-center md:text-left z-20">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1.5 sm:px-3 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold mb-4 sm:mb-6 md:mb-8 backdrop-blur-sm tracking-wide uppercase">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-              </span>
-              <span className="hidden xs:inline">#1 Industrial Supplier in India</span>
-              <span className="xs:hidden">#1 Supplier</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 sm:mb-4 md:mb-6 tracking-tight leading-[1.1]">
-              Master Your Craft with <br className="hidden sm:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600 filter drop-shadow-lg">Precision Tools</span>
-            </h1>
-            <p className="text-sm sm:text-base text-gray-400 mb-6 sm:mb-8 md:mb-10 max-w-lg leading-relaxed mx-auto md:mx-0 font-medium tracking-wide px-2 sm:px-0">
-              Equip yourself with professional-grade power tools and authentic spare parts. Engineered for durability, performance, and those who demand the best.
+        {/* Product Grid Area */}
+        <div className="flex-1 w-full space-y-6">
+          {/* Results Summary */}
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              Showing <span className="text-gray-900 dark:text-white">{displayedProducts.length}</span> of {filteredProducts.length} Items
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center md:justify-start px-2 sm:px-0">
-              <button
-                onClick={() => {
-                  const el = document.getElementById('products');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 sm:py-4 px-8 sm:px-10 rounded-xl sm:rounded-2xl transition-all shadow-xl hover:shadow-orange-500/25 hover:-translate-y-1 flex items-center justify-center gap-2 text-base sm:text-lg"
-              >
-                Start Shopping <Database className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </div>
           </div>
 
-          {/* Right: Featured Product Image */}
-          <div className="w-full md:w-1/2 flex justify-center md:justify-end relative">
-            <div className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-md aspect-square">
-              {/* Glow Effect */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-orange-500/20 blur-[80px] sm:blur-[100px] rounded-full pointer-events-none"></div>
-
-              <img
-                src="/images/hero_drill.png"
-                alt="Professional Power Drill"
-                className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform hover:scale-105 transition-transform duration-500 will-change-transform"
-                loading="eager"
-              />
-
-
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="products" className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Sidebar Filters & Search */}
-        <div className="w-full lg:w-72 flex-shrink-0 space-y-6 lg:sticky lg:top-24 z-30">
-          {/* Search */}
-          <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Search className="h-4 w-4" /> Search
-            </h3>
-            <div className="relative group">
-              <input
-                type="text"
-                placeholder="Search tools..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white transition-all shadow-inner"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-orange-500 transition-colors" />
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Filter className="h-4 w-4" /> Categories
-            </h3>
-            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
-              <button
-                onClick={() => setSelectedCategory('All')}
-                className={`flex-shrink-0 lg:flex-shrink-1 w-auto lg:w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between gap-3 group ${selectedCategory === 'All'
-                  ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30'
-                  : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
-                  }`}
-              >
-                <span>All Products</span>
-                {selectedCategory === 'All' && <div className="w-2 h-2 rounded-full bg-orange-500"></div>}
-              </button>
-              {categories.map(category => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.name)}
-                  className={`flex-shrink-0 lg:flex-shrink-1 w-auto lg:w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between gap-3 group ${selectedCategory === category.name
-                    ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30'
-                    : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
-                    }`}
-                >
-                  <span>{category.name}</span>
-                  {selectedCategory === category.name && <div className="w-2 h-2 rounded-full bg-orange-500"></div>}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Product Grid */}
-        <div className="flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
             {displayedProducts.map(product => (
-              <div key={product.id} className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-orange-100 dark:hover:border-orange-900/30 transition-all duration-300 group flex flex-col h-full">
-                <div className="relative h-56 overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+              <div key={product.id} className="hover-lift group flex flex-col h-full bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 transition-all duration-500 overflow-hidden">
+                {/* Image Container */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-50 dark:bg-gray-800/50 m-2 rounded-[1.5rem] p-6 transition-colors group-hover:bg-white dark:group-hover:bg-gray-800">
                   <img
                     src={product.imageUrl || 'https://via.placeholder.com/400x300?text=No+Image'}
                     alt={product.name}
                     loading="lazy"
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500 will-change-transform"
+                    className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-all duration-700 ease-out will-change-transform"
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+
+                  {/* Stock Badge */}
                   {product.stock < 10 && (
-                    <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur text-red-600 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1 border border-red-100 dark:border-red-900/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                      Only {product.stock} left
+                    <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-red-500/20 flex items-center gap-2 animate-in fade-in zoom-in duration-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                      Low Stock: {product.stock}
                     </div>
                   )}
-                </div>
 
-                <div className="p-5 flex flex-col flex-grow relative">
-                  <div className="mb-3">
-                    <span className="text-xs font-bold tracking-wider text-gray-400 uppercase mb-1 block">
+                  {/* Category Overlay (Mobile only small tag) */}
+                  <div className="absolute top-4 left-4 lg:hidden">
+                    <span className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black uppercase text-gray-500 tracking-tighter">
                       {product.category || 'Spare Part'}
                     </span>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight group-hover:text-orange-600 transition-colors line-clamp-2">
+                  </div>
+                </div>
+
+                {/* Content Container */}
+                <div className="p-6 sm:p-8 flex flex-col flex-grow">
+                  <div className="mb-4">
+                    <span className="hidden lg:block text-[10px] font-black tracking-[0.2em] text-orange-500 uppercase mb-2">
+                      {product.category || 'General Spare'}
+                    </span>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-[1.2] group-hover:text-orange-600 transition-colors line-clamp-2 min-h-[2.4em]">
                       {product.name}
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <svg key={i} className={`w-3.5 h-3.5 ${i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                    <span className="text-xs text-gray-400 ml-1">({product.rating})</span>
+                  {/* Product Technical Description */}
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed italic">
+                      {product.description || "High-performance technical grade machinery component designed for industrial durability."}
+                    </p>
                   </div>
 
-                  <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  {/* Rating */}
+                  <div className="flex items-center gap-1.5 mb-6">
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} className={`w-3 h-3 ${i < Math.floor(product.rating || 5) ? 'text-orange-400 fill-orange-400' : 'text-gray-300 dark:text-gray-700'}`} viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Verified Choice</span>
+                  </div>
+
+                  {/* Footer Action */}
+                  <div className="mt-auto pt-6 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between gap-4">
                     <div>
-                      <span className="text-2xl font-black text-gray-900 dark:text-white">₹{product.price.toLocaleString('en-IN')}</span>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Price</p>
+                      <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">₹{product.price.toLocaleString('en-IN')}</span>
                     </div>
                     <button
                       onClick={() => handleAddToCart(product)}
                       disabled={addedId === product.id}
-                      className={`relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all transform active:scale-95 text-sm ${addedId === product.id
-                        ? 'bg-green-600 text-white shadow-green-500/30 shadow-lg'
-                        : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-xl hover:shadow-2xl hover:bg-orange-600 dark:hover:bg-gray-200'
+                      className={`relative flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all transform active:scale-95 ${addedId === product.id
+                        ? 'bg-green-600 text-white shadow-xl shadow-green-600/20'
+                        : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-orange-600 dark:hover:bg-orange-500 dark:hover:text-white shadow-xl shadow-black/5'
                         }`}
                     >
                       {addedId === product.id ? (
-                        'Added'
+                        'In Bag'
                       ) : (
                         <>
-                          <Plus className="h-4 w-4" /> Add
+                          <Plus size={16} strokeWidth={3} /> Add
                         </>
                       )}
                     </button>
@@ -338,17 +325,17 @@ export const Home: React.FC = () => {
             ))}
 
             {filteredProducts.length === 0 && (
-              <div className="col-span-full py-24 text-center bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white dark:bg-gray-800 mb-6 shadow-sm">
-                  <Filter className="h-8 w-8 text-gray-400" />
+              <div className="col-span-full py-32 text-center bg-gray-50 dark:bg-gray-900/50 rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-white dark:bg-gray-800 mb-8 shadow-xl">
+                  <Search className="h-10 w-10 text-gray-300" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No matching products</h3>
-                <p className="text-gray-500 mb-6">Try adjusting your search or filters to find what you're looking for.</p>
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-tight">Zero Matches Found</h3>
+                <p className="text-gray-500 font-medium mb-8 max-w-sm mx-auto">We couldn't find any results for your current filters. Try refining your search parameters.</p>
                 <button
                   onClick={() => { setSelectedCategory('All'); setSearchQuery(''); }}
-                  className="text-orange-600 font-bold hover:text-orange-700 hover:underline"
+                  className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-600 transition-colors"
                 >
-                  Clear all filters
+                  Clear All Filters
                 </button>
               </div>
             )}
@@ -356,65 +343,122 @@ export const Home: React.FC = () => {
 
           {/* Pagination Controls */}
           {filteredProducts.length > itemsPerPage && (
-            <div className="mt-12 flex justify-center items-center gap-4">
+            <div className="mt-16 flex justify-center items-center gap-3">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-20 transition-all active:scale-90"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft size={24} />
               </button>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Page {currentPage} of {totalPages}
+              <div className="px-6 h-12 flex items-center rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                <span className="text-xs font-black uppercase tracking-widest text-gray-400">
+                  Page <span className="text-gray-900 dark:text-white">{currentPage}</span> / {totalPages}
                 </span>
               </div>
 
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-20 transition-all active:scale-90"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight size={24} />
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Why Choose Us - Features Grid (Moved to Bottom) */}
-      <div id="features" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
-          <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-6">
-            <Database className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+      {/* Trust Badges */}
+      <div id="features" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-12">
+        <div className="group bg-white dark:bg-gray-900 p-10 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+          <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:rotate-6">
+            <Database className="h-8 w-8 text-blue-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">100% Genuine Parts</h3>
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-            We source directly from authorized manufacturers to ensure you get authentic armatures, gears, and switches.
+          <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tighter">Certified Authentic</h3>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+            100% Genuine spare parts sourced directly from authorized factory floors and verified distributors.
           </p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
-          <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-6">
-            <Flashlight className="h-7 w-7 text-orange-600 dark:text-orange-400" />
+        <div className="group bg-white dark:bg-gray-900 p-10 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+          <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-orange-600 group-hover:text-white transition-all transform group-hover:rotate-6">
+            <RefreshCw className="h-8 w-8 text-orange-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Fast Dispatch</h3>
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-            Orders processed within 24 hours. Pre-paid priority shipping ensures your tools reach you when you need them.
+          <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tighter">Rapid Logistics</h3>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+            Precision logistics ensures your machinery components are dispatched within 24 hours of confirmation.
           </p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow md:col-span-2 lg:col-span-1">
-          <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-6">
-            <Shield className="h-7 w-7 text-green-600 dark:text-green-400" />
+        <div className="group bg-white dark:bg-gray-900 p-10 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 md:col-span-2 lg:col-span-1">
+          <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-green-600 group-hover:text-white transition-all transform group-hover:rotate-6">
+            <Shield className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Secure Payments</h3>
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-            Your transactions are encrypted and secured. We prioritize your safety with verified payment gateways.
+          <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tighter">Elite Security</h3>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+            Full-spectrum encryption and verified payment gateways for professional industrial procurement.
           </p>
         </div>
       </div>
 
-      <Testimonials />
+      <div className="pt-12">
+        <Testimonials />
+      </div>
+
+      {/* SEO Semantic Content Section */}
+      <section className="mt-20 py-20 bg-gray-50/50 dark:bg-gray-900/30 rounded-[3rem] border border-gray-100 dark:border-gray-800">
+        <div className="max-w-6xl mx-auto px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Technical Expertise & Support</h2>
+            <div className="h-1.5 w-24 bg-orange-600 mx-auto rounded-full"></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 text-orange-600">
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm"><Terminal size={24} /></div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Angle Grinder Care</h4>
+              </div>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                Maximize the life of your <strong>GWS 600</strong> and <strong>GWS 900</strong> grinders. Regularly check <strong>carbon brushes</strong> every 100 hours of operation. Using genuine <strong>Ansar Tool gears</strong> ensures high-torque performance without overheating.
+              </p>
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 text-blue-600">
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm"><Database size={24} /></div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Drill Bit & Armature</h4>
+              </div>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                For <strong>GSB 500 RE</strong> or heavy-duty hammer drills, the <strong>armature commutator</strong> is critical. Our 100% copper winded armatures provide superior conductivity and resistance against voltage fluctuations in <strong>Indian power grids</strong>.
+              </p>
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 text-green-600">
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm"><Shield size={24} /></div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Marble Cutter Stators</h4>
+              </div>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                Industrial cutters like <strong>GDM 13-34</strong> require stable magnetic fields. A genuine <strong>stator field coil</strong> prevents winding burnouts during continuous heavy-duty masonry work across <strong>construction sites in India</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="prose dark:prose-invert max-w-none space-y-6 text-gray-500 dark:text-gray-400 font-medium leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-12">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Flashlight size={20} className="text-orange-500" /> Professional Industry Insight
+            </h3>
+            <p>
+              Ansar Power Tools is India's premier destination for high-quality <strong>machine spare parts</strong> and professional <strong>power tool machines</strong>. We specialize in providing a comprehensive range of components for every industrial need, from <strong>angle grinder spare parts</strong> to <strong>heavy-duty drill machine components</strong>.
+            </p>
+            <p>
+              Our inventory includes 100% genuine <strong>armatures, field coils, carbon brushes, and gears</strong> for leading brands like <strong>Bosch, Makita, and Dongcheng</strong>. Whether you are looking for a <strong>marble cutter armature in West Bengal</strong> or the <strong>best price for a professional grinder machine</strong>, Ansar Tools ensures uncompromising quality and rapid pan-India delivery.
+            </p>
+            <p>
+              Based in Bansberia, we serve both wholesale and retail customers across the country, ensuring that your machinery never stays idle. Explore our catalog for <strong>spare parts of all machines</strong>, including stators, switches, and high-precision gear sets designed for industrial endurance.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

@@ -14,55 +14,65 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Diagnostics Helper
+const logDiagnostic = (action: string, details: any) => {
+  console.group(`[Auth Diagnostic] ${action}`);
+  console.log("Details:", details);
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("Connection:", navigator.onLine ? "Online" : "Offline");
+  console.groupEnd();
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper to fetch the real profile from the database
   const fetchUserProfile = async (sessionUser: any) => {
     try {
-      console.log(`[Auth] Fetching profile for: ${sessionUser.email} (${sessionUser.id})`);
-      
-      // Use maybeSingle() instead of single() to avoid "Cannot coerce..." error if row is missing
-      const { data: profile, error } = await supabase
+      logDiagnostic("Fetching Profile", { email: sessionUser.email });
+
+      // 5-second timeout for profile fetch
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', sessionUser.id)
         .maybeSingle();
 
-      if (error) {
-        // Fix: Log specific message instead of generic object
-        console.error("Error fetching profile:", error.message || error);
+      const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
+        setTimeout(() => reject(new Error("Database timeout after 5s")), 5000)
+      );
 
-        // Specific handling for missing table (common in new setups)
-        if (error.code === '42P01') {
-          console.warn("⚠️ 'profiles' table not found in Supabase. Please run the SQL setup script.");
-        }
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);
+
+      if (error) {
+        logDiagnostic("Profile Error", error);
       }
 
-      console.log("[Auth] DB Profile:", profile);
-
       if (profile) {
-        const role = (profile.role as UserRole) || UserRole.CUSTOMER;
-        console.log(`[Auth] Role determined as: ${role}`);
         setUser({
           id: sessionUser.id,
           email: sessionUser.email || '',
-          name: profile.full_name || sessionUser.email?.split('@')[0],
-          role: role
+          name: profile.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0],
+          role: profile.role as UserRole
         });
       } else {
-        console.warn("[Auth] Profile missing in DB. Fallback to CUSTOMER.");
-        // Fallback to session data if DB fetch fails OR if profile doesn't exist yet
+        // Fallback if profile not found
         setUser({
           id: sessionUser.id,
           email: sessionUser.email || '',
           name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0],
-          role: UserRole.CUSTOMER
+          role: (sessionUser.app_metadata?.role || sessionUser.user_metadata?.role || 'CUSTOMER') as UserRole
         });
       }
     } catch (err: any) {
-      console.error("Unexpected error in fetchUserProfile:", err.message || err);
+      logDiagnostic("Fetch Catch", err.message);
+      // Ensure we still have a basic user object even if DB fails
+      setUser({
+        id: sessionUser.id,
+        email: sessionUser.email || '',
+        name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0],
+        role: (sessionUser.app_metadata?.role || sessionUser.user_metadata?.role || 'CUSTOMER') as UserRole
+      });
     } finally {
       setLoading(false);
     }
@@ -71,11 +81,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     // Check active session
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (e) {
+        logDiagnostic("Init Auth Error", e);
         setLoading(false);
       }
     };
@@ -84,13 +99,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[Auth] State Change: ${event}`);
+      console.log(`[Auth Event] ${event}`);
       if (session?.user) {
         // If it's a SIGN_IN event or similar, we want to verify the role from DB
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-           // We don't set loading here to avoid flicker if just refreshing token
-           // But for initial sign in, fetchUserProfile handles loading state if called manually
-           await fetchUserProfile(session.user);
+          // We don't set loading here to avoid flicker if just refreshing token
+          // But for initial sign in, fetchUserProfile handles loading state if called manually
+          await fetchUserProfile(session.user);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -102,42 +117,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string) => {
-    setLoading(true); // Start loading immediately
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      console.error("Supabase Login Error:", error.message);
-      setLoading(false);
-      return { error };
-    }
+    setLoading(true);
+    logDiagnostic("Login Attempt", { email });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
 
-    // Critical Fix: Explicitly wait for profile fetch before resolving login
-    // This prevents the "Race Condition" where navigation happens before role is set
-    if (data.user) {
-      await fetchUserProfile(data.user);
-    } else {
+      if (data.user) {
+        await fetchUserProfile(data.user);
+      }
+      return { error: null };
+    } catch (e: any) {
+      logDiagnostic("Login Failed", e.message);
       setLoading(false);
+      return { error: e };
     }
-
-    return { error: null };
   };
 
   const signup = async (email: string, password: string, name: string, role: UserRole = UserRole.CUSTOMER) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role // This initial metadata is used by the trigger to populate the profile
+    setLoading(true);
+    logDiagnostic("Signup Attempt", { email, name });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, role }
         }
-      }
-    });
-    if (error) console.error("Supabase Signup Error:", error.message);
-    return { error };
+      });
+
+      if (error) throw error;
+      logDiagnostic("Signup Success", { userId: data.user?.id });
+      // If signup is successful, we don't need to wait for the profile trigger here
+      // The onAuthStateChange will handle the redirection/session
+      return { error: null };
+    } catch (e: any) {
+      logDiagnostic("Signup Failed", e.message);
+      setLoading(false);
+      return { error: e };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
@@ -146,11 +166,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
+    <AuthContext.Provider value={{
+      user,
+      login,
       signup,
-      logout, 
+      logout,
       isAuthenticated: !!user,
       isAdmin: user?.role === UserRole.ADMIN,
       loading

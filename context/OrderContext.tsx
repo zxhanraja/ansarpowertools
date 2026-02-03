@@ -57,7 +57,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           quantity: i.quantity,
           imageUrl: i.product?.image_url || '',
           // Add default values for other Product fields not stored in order_items
-          description: '', 
+          description: '',
           currency: o.currency,
           sku: '',
           stock: 0,
@@ -157,11 +157,11 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const getOrderByNumber = (orderNumber: string) => orders.find(o => o.orderNumber === orderNumber);
 
   return (
-    <OrderContext.Provider value={{ 
-      orders, 
-      createOrder, 
-      updateOrderStatus, 
-      getOrderById, 
+    <OrderContext.Provider value={{
+      orders,
+      createOrder,
+      updateOrderStatus,
+      getOrderById,
       getOrderByNumber
     }}>
       {children}
@@ -169,6 +169,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 };
 
+// Custom hook moved to the bottom for better HMR compatibility
 export const useOrder = () => {
   const context = useContext(OrderContext);
   if (context === undefined) {

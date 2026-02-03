@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { UserRole } from '../types';
-import { User, Shield, LogIn, AlertCircle, Lock, ArrowLeft, CheckCircle, Mail, ArrowRight, Store } from 'lucide-react';
+import { User, Shield, LogIn, AlertCircle, Lock, ArrowLeft, CheckCircle, Mail, ArrowRight, Store, Loader2 as ImageIcon } from 'lucide-react';
 import { Loader } from '../components/Loader';
 import { supabase } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const { login, signup, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  
+
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,7 +20,7 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  
+
   // Determine view based strictly on URL
   const isAdminRoute = searchParams.get('role') === 'admin';
 
@@ -42,58 +43,55 @@ export const Login: React.FC = () => {
     setSuccess('');
     setLoading(true);
 
+    // Safety Timeout: Force stop loading after 5 minutes
+    const safetyTimer = setTimeout(() => {
+      setLoading(last => {
+        if (last) {
+          setError("Request timed out. Please refresh and try again.");
+          return false;
+        }
+        return false;
+      });
+    }, 300000);
+
     try {
       const role = isAdminRoute ? UserRole.ADMIN : UserRole.CUSTOMER;
 
       if (isLoginMode) {
-        const { error } = await login(email, password);
-        if (error) throw error;
-        
-        // Strict Admin Check
-        if (isAdminRoute) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          
-          if (currentUser) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', currentUser.id)
-              .maybeSingle();
+        // Race login with a 5 minute timeout
+        const result = await login(email, password);
+        const { error } = result;
 
-            if (profile?.role !== UserRole.ADMIN) {
-              await logout();
-              throw new Error("Unauthorized: This area is for Admins only.");
-            }
-          }
-        }
+        if (error) throw error;
       } else {
         const { error } = await signup(email, password, name, role);
         if (error) throw error;
-        setSuccess('Account created successfully! Redirecting...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        setSuccess('Account created! If registration was successful, you will be logged in automatically. Please check your email if confirmation is required.');
       }
 
       if (isAdminRoute) {
         navigate('/admin');
       } else {
-        navigate('/');
+        const from = location.state?.from?.pathname || '/';
+        navigate(from);
       }
     } catch (err: any) {
       const errorMsg = err?.message || String(err);
       console.error("Auth Error:", errorMsg);
-      
+
       let displayMsg = errorMsg || 'An error occurred during authentication';
-      
+
       if (displayMsg.includes('Database error saving new user')) {
-        displayMsg = 'System Setup: Database tables are missing. Run SQL script.';
+        displayMsg = 'System Setup: Database connection failure. Please reload.';
       } else if (displayMsg.includes('Invalid login credentials')) {
-        displayMsg = 'Invalid email or password. Please try again.';
+        displayMsg = 'Invalid email or password.';
       } else if (displayMsg.includes('email not confirmed')) {
         displayMsg = 'Please verify your email address.';
       }
-      
+
       setError(displayMsg);
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   };
@@ -103,284 +101,191 @@ export const Login: React.FC = () => {
     if (error) setError('');
   };
 
-  // --- VIEW 1: ADMIN PORTAL (Secure/Dark Theme) ---
+  // --- VIEW 1: ADMIN PORTAL ---
   if (isAdminRoute) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 p-10 rounded-2xl shadow-2xl border-t-4 border-orange-600 dark:border-orange-500">
-          <div>
-            <div className="mx-auto h-16 w-16 bg-gray-900 dark:bg-gray-950 rounded-full flex items-center justify-center shadow-lg">
-              <Shield className="h-8 w-8 text-orange-500" />
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800">
+          <div className="text-center mb-8">
+            <div className="mx-auto h-12 w-12 bg-orange-100 dark:bg-orange-900/20 rounded-xl flex items-center justify-center mb-4">
+              <Shield className="h-6 w-6 text-orange-600" />
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
-              Admin Portal
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
-              Restricted Access. Authorized Personnel Only.
-            </p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Access</h2>
+            <p className="text-sm text-gray-500 mt-2">Authorized personnel only</p>
           </div>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-600 p-4 rounded-r">
-              <div className="flex">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
-                <div className="ml-3">
-                  <p className="text-sm text-red-700 dark:text-red-200 font-bold">{error}</p>
-                </div>
-              </div>
+            <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex gap-2 items-center">
+              <AlertCircle size={16} />
+              {error}
             </div>
           )}
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:text-sm font-mono transition-colors"
-                    placeholder="admin@ansartools.com"
-                    value={email}
-                    onChange={(e) => handleInputChange(setEmail, e.target.value)}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secure Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    name="password"
-                    type="password"
-                    required
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:text-sm transition-colors"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => handleInputChange(setPassword, e.target.value)}
-                  />
-                </div>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => handleInputChange(setEmail, e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => handleInputChange(setPassword, e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-lg text-white bg-gray-900 dark:bg-orange-600 hover:bg-gray-800 dark:hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-70 transition-all shadow-md"
+              className="w-full bg-gray-900 border border-transparent text-white py-3 rounded-xl font-bold hover:bg-black transition-all disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
             >
               {loading ? (
-                <Loader size={20} className="inline-block" />
+                <>
+                  <ImageIcon className="animate-spin h-5 w-5 text-orange-500" />
+                  <span>Checking...</span>
+                </>
               ) : (
                 <>
-                  <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                    <Lock className="h-5 w-5 text-gray-500 dark:text-white/50 group-hover:text-white transition-colors" />
-                  </span>
-                  Authenticate
+                  <LogIn size={18} /> Authenticate
                 </>
               )}
             </button>
-            
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center justify-center gap-1 mx-auto transition-colors"
-              >
-                <ArrowLeft size={14} /> Return to Store
-              </button>
-            </div>
           </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-4">
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center px-4">
+              If you don't have an account, please sign up as a regular user first.
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full flex items-center justify-center gap-2 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors"
+            >
+              <User size={16} /> Regular Customer Login
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full flex items-center justify-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Store size={16} /> Back to Shop
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // --- VIEW 2: CUSTOMER STORE LOGIN (Split Screen Professional) ---
+  // --- VIEW 2: CUSTOMER LOGIN (Minimal) ---
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col md:flex-row shadow-2xl rounded-2xl overflow-hidden bg-white dark:bg-gray-800 my-4 md:my-8 border border-gray-100 dark:border-gray-700">
-      
-      {/* Left Side - Form */}
-      <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-        <div className="max-w-md mx-auto w-full">
-          <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">
-              {isLoginMode ? 'Welcome Back' : 'Create Account'}
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              {isLoginMode 
-                ? 'Enter your credentials to access your account.' 
-                : 'Join the community of professional builders.'}
-            </p>
+    <div className="min-h-[70vh] flex items-center justify-center p-4">
+      <div className="w-full max-w-[400px] animate-fade-in">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="flex justify-center mb-4">
+            {/* Logo Component should be here, using inline SVG for now to match style */}
+            <svg viewBox="30 20 40 60" className="h-12 w-12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M48 25L35 50H48L45 75L65 45H52L55 25H48Z" className="fill-orange-600" />
+            </svg>
           </div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+            {isLoginMode ? 'Welcome back' : 'Create account'}
+          </h1>
+          <p className="text-gray-500 mt-2">
+            {isLoginMode ? 'Enter your details to sign in.' : 'Start your journey with us today.'}
+          </p>
+        </div>
 
+        {/* Form Card */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-lg flex items-start gap-3 border border-red-100 dark:border-red-900/50">
-               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-               <p>{error}</p>
+            <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex gap-2 items-start">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm rounded-lg flex items-center gap-3 border border-green-100 dark:border-green-900/50">
-              <CheckCircle className="h-5 w-5 shrink-0" />
-              {success}
+            <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm rounded-lg flex gap-2 items-center">
+              <CheckCircle size={16} />
+              <span>{success}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLoginMode && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    type="text"
-                    required={!isLoginMode}
-                    value={name}
-                    onChange={(e) => handleInputChange(setName, e.target.value)}
-                    placeholder="John Doe"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => handleInputChange(setName, e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400"
+                  placeholder="John Doe"
+                />
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => handleInputChange(setEmail, e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => handleInputChange(setEmail, e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400"
+                placeholder="name@example.com"
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => handleInputChange(setPassword, e.target.value)}
-                  placeholder="••••••••"
-                  minLength={6}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
-                />
-              </div>
-              {!isLoginMode && <p className="text-xs text-gray-500 dark:text-gray-400">Must be at least 6 characters</p>}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => handleInputChange(setPassword, e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-gray-400"
+                placeholder="••••••••"
+              />
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3.5 rounded-lg font-bold text-base transition-colors shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-orange-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
             >
               {loading ? (
-                <Loader size={24} className="inline-block" />
-              ) : isLoginMode ? (
-                <>Sign In <ArrowRight className="h-5 w-5" /></>
+                <Loader size={20} className="text-white" />
               ) : (
-                <>Create Account</>
+                <>{isLoginMode ? 'Sign In' : 'Sign Up'} <ArrowRight size={18} /></>
               )}
             </button>
           </form>
 
-          {/* Toggle View Section */}
-          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
-            {isLoginMode ? (
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                New to Ansar Tools?{' '}
-                <button 
-                  type="button"
-                  onClick={() => { setIsLoginMode(false); setError(''); }}
-                  className="text-orange-600 hover:text-orange-700 font-bold hover:underline transition-colors"
-                >
-                  Create an account
-                </button>
-              </p>
-            ) : (
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Already have an account?{' '}
-                <button 
-                  type="button"
-                  onClick={() => { setIsLoginMode(true); setError(''); }}
-                  className="text-orange-600 hover:text-orange-700 font-bold hover:underline transition-colors"
-                >
-                  Sign In
-                </button>
-              </p>
-            )}
-            
-            {/* Professional Helper Text */}
-            <div className="mt-4 bg-gray-50 dark:bg-gray-900/50 py-3 px-4 rounded-lg inline-block">
-               <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                 {isLoginMode 
-                   ? "If you haven't created an account yet, please switch to the Sign Up tab." 
-                   : "Create an account to track orders and checkout faster."}
-               </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Branding/Visual */}
-      <div className="hidden md:block w-1/2 relative bg-gray-900">
-        <img 
-          src="https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=1600" 
-          alt="Workshop Tools" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/90 to-gray-900/90 flex flex-col justify-between p-16 text-white">
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                <Store className="h-8 w-8 text-white" />
-              </div>
-              <span className="font-bold text-2xl tracking-tight">ANSAR TOOLS</span>
-            </div>
-            <h2 className="text-4xl font-extrabold leading-tight mb-6">
-              Professional Equipment.<br/>Reliable Results.
-            </h2>
-            <p className="text-lg text-white/80 max-w-md leading-relaxed">
-              Join thousands of professionals who trust Ansar Tools for their spare parts and machinery needs.
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              {isLoginMode ? "Don't have an account? " : "Already have an account? "}
+              <button
+                onClick={() => { setIsLoginMode(!isLoginMode); setError(''); }}
+                className="font-bold text-orange-600 hover:text-orange-700 transition-colors"
+              >
+                {isLoginMode ? 'Sign up' : 'Log in'}
+              </button>
             </p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-white/10 p-2 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold">Real-time Tracking</h3>
-                <p className="text-sm text-white/70">Monitor your shipments every step of the way.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-white/10 p-2 rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                 <h3 className="font-bold">Secure Payments</h3>
-                 <p className="text-sm text-white/70">Encrypted transactions via Stripe.</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+

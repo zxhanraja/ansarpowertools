@@ -2,22 +2,19 @@ import React from 'react';
 
 interface LogoProps {
     className?: string;
+    style?: React.CSSProperties;
+    variant?: 'brand' | 'simple';
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = "h-10 w-10" }) => {
+export const Logo: React.FC<LogoProps> = ({ className = "h-10 w-10", style, variant = 'brand' }) => {
+    const logoUrl = "https://ik.imagekit.io/ioktbcewp/ChatGPT%20Image%20Jan%2026,%202026,%2012_56_43%20PM.png";
+
     return (
-        <svg
-            viewBox="30 20 40 60"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className={className}
-            aria-label="Ansar Power Tools Logo"
-        >
-            {/* Lightning Bolt / Power Symbol */}
-            <path
-                d="M48 25L35 50H48L45 75L65 45H52L55 25H48Z"
-                className="fill-orange-500"
-            />
-        </svg>
+        <img
+            src={logoUrl}
+            alt="Ansar Power Tools Logo"
+            className={`${className} object-contain ${variant === 'brand' ? 'rounded-xl shadow-lg' : ''}`}
+            style={style}
+        />
     );
 };

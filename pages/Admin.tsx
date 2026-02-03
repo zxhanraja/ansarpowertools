@@ -27,8 +27,13 @@ import {
   FolderTree,
   AlignLeft,
   Tag,
-  Layers
+  Layers,
+  Crop,
+  Maximize,
+  User
 } from 'lucide-react';
+import Cropper from 'react-easy-crop';
+import { getCroppedImg } from '../utils/imageUtils';
 
 const DEFAULT_PRODUCT_STATE: Partial<Product> = {
   name: '',
@@ -70,6 +75,13 @@ export const Admin: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [productForm, setProductForm] = useState<Partial<Product>>(DEFAULT_PRODUCT_STATE);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Crop State
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [isCropping, setIsCropping] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
   // Category State
   const [newCategory, setNewCategory] = useState('');
@@ -199,18 +211,33 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
   );
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageSrc(reader.result?.toString() || null);
+        setIsCropping(true);
+      });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const handleUploadCroppedImage = async () => {
     try {
       setUploadingImage(true);
-      const file = event.target.files?.[0];
-      if (!file) return;
+      if (!imageSrc || !croppedAreaPixels) return;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      const fileName = `${Math.random()}.jpg`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file);
+        .upload(filePath, croppedImageBlob);
 
       if (uploadError) throw uploadError;
 
@@ -219,6 +246,8 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
         .getPublicUrl(filePath);
 
       setProductForm(prev => ({ ...prev, imageUrl: data.publicUrl }));
+      setIsCropping(false);
+      setImageSrc(null);
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
     } finally {
@@ -251,7 +280,16 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.price) return;
+    console.log("Saving product...", productForm);
+
+    if (!productForm.name) {
+      alert("Product Name is required");
+      return;
+    }
+    if (productForm.price === undefined || productForm.price < 0) {
+      alert("Valid Price is required");
+      return;
+    }
 
     const productData = {
       name: productForm.name!,
@@ -265,17 +303,28 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
     };
 
     let result;
-    if (isEditing && editingId) {
-      result = await updateProduct(editingId, productData);
-    } else {
-      result = await addProduct(productData);
-    }
+    try {
+      if (isEditing && editingId) {
+        console.log("Updating product:", editingId);
+        result = await updateProduct(editingId, productData);
+      } else {
+        console.log("Adding new product");
+        result = await addProduct(productData);
+      }
 
-    if (result.error) {
-      alert(`Error ${isEditing ? 'updating' : 'adding'} product: ` + result.error.message);
-    } else {
-      setIsProductModalOpen(false);
-      setProductForm(DEFAULT_PRODUCT_STATE);
+      console.log("Save result:", result);
+
+      if (result.error) {
+        console.error("Operation failed:", result.error);
+        alert(`Error: ${result.error.message || JSON.stringify(result.error)}`);
+      } else {
+        alert("Success! Product saved.");
+        setIsProductModalOpen(false);
+        setProductForm(DEFAULT_PRODUCT_STATE);
+      }
+    } catch (err: any) {
+      console.error("Unexpected error in handleSaveProduct:", err);
+      alert("Unexpected error: " + err.message);
     }
   };
 
@@ -405,31 +454,46 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-white border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+          <div className="bg-white dark:bg-gray-950 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50">
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Details</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Date</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {filteredOrders.length === 0 ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">No orders found.</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-medium">No order data available yet.</td></tr>
                   ) : (
                     filteredOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4"><div className="text-sm font-bold text-gray-900">{order.orderNumber}</div><div className="text-xs text-gray-500">{order.shippingDetails.fullName}</div></td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>{order.status}</span></td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-right">₹{order.totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                      <tr key={order.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-900/40 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{order.orderNumber}</div>
+                          <div className="text-[10px] font-bold text-gray-400 flex items-center gap-1.5 mt-0.5"><User size={10} /> {order.shippingDetails.fullName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-medium text-center">{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ring-1 ring-inset ${getStatusColor(order.status)} ring-opacity-20 shadow-sm transition-all`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-black text-right">₹{order.totalAmount.toLocaleString('en-IN')}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {order.status === OrderStatus.PAID && <button onClick={() => setSelectedOrder(order.id)} className="text-orange-600 hover:text-orange-900 font-bold inline-flex items-center gap-1 bg-orange-50 px-3 py-1 rounded-md"><Truck className="h-4 w-4" /> Ship</button>}
-                          {order.status === OrderStatus.SHIPPED && <button onClick={() => updateOrderStatus(order.id, OrderStatus.DELIVERED)} className="text-green-600 hover:text-green-900 font-bold inline-flex items-center gap-1"><CheckCircle className="h-4 w-4" /> Complete</button>}
+                          {order.status === OrderStatus.PAID && (
+                            <button onClick={() => setSelectedOrder(order.id)} className="bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 ml-auto shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                              <Truck size={14} /> Ship
+                            </button>
+                          )}
+                          {order.status === OrderStatus.SHIPPED && (
+                            <button onClick={() => updateOrderStatus(order.id, OrderStatus.DELIVERED)} className="bg-green-500 text-white hover:bg-green-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 ml-auto shadow-lg shadow-green-500/20 active:scale-95 transition-all">
+                              <CheckCircle size={14} /> Finish
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -448,39 +512,55 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
             <h2 className="text-base sm:text-lg font-bold text-gray-900">Product Inventory</h2>
             <button onClick={openAddModal} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg shadow-orange-500/30"><Plus className="h-5 w-5" /> Add Product</button>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-white border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <div className="bg-white dark:bg-gray-950 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50">
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Information</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest center">Category</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest center">SKU</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Inventory</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {productsLoading ? (<tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">Loading...</td></tr>) :
-                    products.length === 0 ? (<tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No products.</td></tr>) : (
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {productsLoading ? (<tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-bold animate-pulse">Scanning Inventory...</td></tr>) :
+                    products.length === 0 ? (<tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No products found in catalog.</td></tr>) : (
                       products.map((product) => (
-                        <tr key={product.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4"><div className="flex items-center"><div className="h-10 w-10 shrink-0 rounded-md bg-gray-100 border border-gray-200 overflow-hidden mr-3"><img className="h-full w-full object-cover" src={product.imageUrl || 'https://via.placeholder.com/50'} alt="" /></div><div className="text-sm font-medium text-gray-900">{product.name}</div></div></td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{product.category}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500 font-mono">{product.sku}</td>
-                          <td className="px-6 py-4 text-sm text-gray-900 font-bold text-right">₹{product.price.toLocaleString('en-IN')}</td>
-                          <td className="px-6 py-4 text-sm text-right"><span className={`px-2 py-1 rounded-full text-xs font-bold ${product.stock < 10 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{product.stock}</span></td>
-                          <td className="px-6 py-4 text-right text-sm font-medium">
+                        <tr key={product.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-900/40 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 shrink-0 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-1.5 shadow-sm">
+                                <img className="h-full w-full object-contain" src={product.imageUrl || 'https://via.placeholder.com/50'} alt="" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-black text-gray-900 dark:text-white truncate max-w-[200px]">{product.name}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{product.id.slice(0, 8)}...</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-bold text-center">
+                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] uppercase font-black">{product.category}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono font-bold text-center uppercase tracking-tighter">{product.sku}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-black text-right">₹{product.price.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ${product.stock < 10 ? 'bg-red-50 text-red-600 ring-red-600/20' : 'bg-green-50 text-green-600 ring-green-600/20'}`}>
+                              {product.stock} units
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => openEditModal(product)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md font-bold text-xs border border-blue-200 transition-colors"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+                              <button onClick={() => openEditModal(product)} className="p-2 bg-gray-100 dark:bg-gray-800 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all active:scale-90" title="Edit Catalog Entry"><Pencil size={14} /></button>
                               <button
                                 onClick={() => handleDeleteProduct(product.id)}
                                 disabled={deletingId === product.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-md font-bold text-xs border border-red-200 transition-colors disabled:opacity-50"
+                                className="p-2 bg-gray-100 dark:bg-gray-800 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all active:scale-90 disabled:opacity-50"
+                                title="Purge Record"
                               >
-                                {deletingId === product.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                Delete
+                                {deletingId === product.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 size={14} />}
                               </button>
                             </div>
                           </td>
@@ -568,60 +648,158 @@ ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';`);
 
       {/* Add/Edit Product Modal */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
-            <div className="px-4 py-3 sm:px-8 sm:py-5 border-b border-gray-200 flex justify-between items-center bg-white">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="bg-orange-100 p-1.5 sm:p-2 rounded-lg">{isEditing ? <Pencil className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />}</div>
-                <div><h3 className="text-lg sm:text-xl font-bold text-gray-900">{isEditing ? 'Edit Product' : 'Add New Product'}</h3></div>
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[100] overflow-y-auto animate-in fade-in duration-300">
+          <div className="flex min-h-full items-start justify-center px-4 py-12 sm:p-20">
+            <div className="relative bg-white dark:bg-gray-950 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-300">
+              <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-950">
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 dark:bg-orange-900/30 p-2.5 rounded-xl">
+                    {isEditing ? <Pencil className="h-5 w-5 text-orange-600" /> : <Plus className="h-5 w-5 text-orange-600" />}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{isEditing ? 'Sync Product Specs' : 'Register New Asset'}</h3>
+                    <p className="text-[9px] text-orange-500 font-bold uppercase tracking-[0.2em] leading-none mt-1">Ansar Power Tools • Industrial Inventory</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full transition-colors"><X className="h-6 w-6" /></button>
               </div>
-              <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar bg-white">
-              <form id="productForm" onSubmit={handleSaveProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><AlignLeft className="h-4 w-4 text-orange-500" /> Product Details</div>
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Product Name *</label><input required type="text" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs sm:text-sm font-medium text-gray-700">Category</label>
-                      <div className="relative">
-                        <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 appearance-none">
-                          <option value="">Select Category...</option>
-                          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                        </select>
-                        <Layers className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+
+              <div className="p-5 sm:p-8 overflow-y-auto custom-scrollbar bg-gray-50/50 dark:bg-gray-950/50">
+                <form id="productForm" onSubmit={handleSaveProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
+                  <div className="space-y-6 sm:space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-200/50 dark:border-gray-800/50"><AlignLeft size={14} className="text-orange-500" /> Core Information</div>
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Product Name</label>
+                          <input required type="text" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="w-full px-4 py-3 text-sm sm:text-base border border-gray-200 dark:border-gray-800 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm" placeholder="e.g. Angle Grinder M14" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Category</label>
+                          <div className="relative">
+                            <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} className="w-full px-4 py-3 text-sm sm:text-base border border-gray-200 dark:border-gray-800 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm appearance-none">
+                              <option value="">Select category...</option>
+                              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                            <Layers className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                            Product Portfolio <span className="text-[8px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-bold">Minimalist</span>
+                          </label>
+                          <textarea
+                            required
+                            value={productForm.description}
+                            onChange={e => setProductForm({ ...productForm, description: e.target.value })}
+                            className="w-full px-5 py-4 text-sm border border-gray-200 dark:border-gray-800 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-48 resize-none transition-all shadow-inner font-medium placeholder:text-gray-300 dark:placeholder:text-gray-700"
+                            placeholder="Brief technical summary... (e.g. High-torque industrial motor with copper winding and heat-resistant housing)"
+                          />
+                          <p className="text-[9px] text-gray-400 font-bold italic ml-1">* This description appears prominently on the store catalog for customers.</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-1.5"><label className="text-xs sm:text-sm font-medium text-gray-700">Description</label><textarea required value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900 h-28 sm:h-32 resize-none" /></div>
                   </div>
-                </div>
-                <div className="space-y-6 sm:space-y-8">
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><Tag className="h-4 w-4 text-orange-500" /> Pricing & Inventory</div>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Price (INR)</label><input required type="number" min="0" value={productForm.price || ''} onChange={e => setProductForm({ ...productForm, price: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
-                      <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">Stock Qty</label><input required type="number" min="0" value={productForm.stock || ''} onChange={e => setProductForm({ ...productForm, stock: Number(e.target.value) })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" /></div>
+
+                  <div className="space-y-8">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-200/50 dark:border-gray-800/50"><Tag size={14} className="text-orange-500" /> Logistics & Pricing</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Price (₹)</label>
+                          <input required type="number" min="0" value={productForm.price || ''} onChange={e => setProductForm({ ...productForm, price: Number(e.target.value) })} className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-800 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">Stock Qty</label>
+                          <input required type="number" min="0" value={productForm.stock || ''} onChange={e => setProductForm({ ...productForm, stock: Number(e.target.value) })} className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-800 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-1">SKU Code</label>
+                        <input type="text" value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-800 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm font-mono" placeholder="Auto-gen SKU" />
+                      </div>
                     </div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-gray-500 uppercase">SKU</label><input type="text" value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white text-gray-900" placeholder="Auto-generated" /></div>
-                  </div>
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-bold text-gray-900 border-b border-gray-200 pb-2"><ImageIcon className="h-4 w-4 text-orange-500" /> Product Image</div>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-6 hover:bg-gray-50 text-center bg-white transition-colors">
-                      {uploadingImage ? <Loader2 className="h-8 w-8 text-orange-600 animate-spin mx-auto" /> :
-                        productForm.imageUrl ? (
-                          <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200"><img src={productForm.imageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"><label className="cursor-pointer bg-white px-3 py-1 rounded text-sm font-bold">Change<input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label></div></div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-200/50 dark:border-gray-800/50"><ImageIcon size={14} className="text-orange-500" /> Merchandising</div>
+                      <div className="relative group/img">
+                        {productForm.imageUrl ? (
+                          <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-gray-800 shadow-inner group">
+                            <img src={productForm.imageUrl} className="w-full h-full object-contain bg-white dark:bg-gray-900" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all p-4 text-center backdrop-blur-sm">
+                              <label className="cursor-pointer bg-white text-gray-900 px-6 py-2.5 rounded-xl font-bold text-sm shadow-xl active:scale-95 transition-transform mb-2">Change Image</label>
+                              <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Supports JPG, PNG, WEBP</p>
+                              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            </div>
+                          </div>
                         ) : (
-                          <label className="cursor-pointer flex flex-col items-center"><Upload className="h-6 w-6 text-gray-400 mb-2" /><span className="text-sm font-bold text-gray-700">Upload Image</span><input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label>
+                          <label className="cursor-pointer flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl bg-white dark:bg-gray-900 hover:bg-orange-50 transition-all group-hover/img:border-orange-300">
+                            <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl mb-4 group-hover/img:scale-110 transition-transform">
+                              <Upload className="h-8 w-8 text-orange-600" />
+                            </div>
+                            <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Upload Product Image</span>
+                            <span className="text-xs text-gray-400 mt-2 font-medium">Recommended: 800x600 (4:3)</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                          </label>
                         )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </form>
+                </form>
+              </div>
+
+              <div className="p-5 sm:p-8 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-4">
+                <button onClick={() => setIsProductModalOpen(false)} className="w-full sm:w-auto px-8 py-3.5 text-sm font-bold border-2 border-gray-100 dark:border-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-2xl transition-all">Cancel</button>
+                <button type="submit" form="productForm" disabled={uploadingImage} className="w-full sm:w-auto px-10 py-3.5 text-sm bg-gray-900 dark:bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50 uppercase tracking-widest">{isEditing ? 'Update Stock' : 'Add to Catalog'}</button>
+              </div>
             </div>
-            <div className="p-4 sm:p-6 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
-              <button onClick={() => setIsProductModalOpen(false)} className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="submit" form="productForm" disabled={uploadingImage} className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-2.5 text-sm sm:text-base bg-gray-900 text-white font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">{isEditing ? 'Update Product' : 'Save Product'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Crop Modal */}
+      {isCropping && imageSrc && (
+        <div className="fixed inset-0 bg-black/80 z-[110] flex flex-col items-center justify-center p-4">
+          <div className="relative w-full max-w-2xl h-[400px] bg-black rounded-xl overflow-hidden mb-4 border border-gray-800">
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={4 / 3}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+            />
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md space-y-4">
+            <div className="flex items-center gap-2">
+              <Maximize className="h-4 w-4 text-gray-500" />
+              <input
+                type="range"
+                value={zoom}
+                min={1}
+                max={3}
+                step={0.1}
+                aria-labelledby="Zoom"
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full accent-orange-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setIsCropping(false); setImageSrc(null); }}
+                className="flex-1 py-2.5 rounded-lg border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadCroppedImage}
+                disabled={uploadingImage}
+                className="flex-1 py-2.5 rounded-lg bg-orange-600 text-white font-bold hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+              >
+                {uploadingImage ? <Loader2 className="animate-spin h-5 w-5" /> : <Crop className="h-4 w-4" />}
+                Crop & Upload
+              </button>
             </div>
           </div>
         </div>

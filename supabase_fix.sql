@@ -207,11 +207,11 @@ WITH CHECK (
 -- (Assuming bucket is created and public)
 
 -- Allow public read access
--- CREATE POLICY "Give public access to product-images" ON storage.objects FOR SELECT USING ( bucket_id = 'product-images' );
+CREATE POLICY "Give public access to product-images" ON storage.objects FOR SELECT USING ( bucket_id = 'product-images' );
 
 -- Allow Admin upload/delete
--- CREATE POLICY "Allow Admin Upload" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'product-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN') );
--- CREATE POLICY "Allow Admin Delete" ON storage.objects FOR DELETE USING ( bucket_id = 'product-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN') );
+CREATE POLICY "Allow Admin Upload" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'product-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN') );
+CREATE POLICY "Allow Admin Delete" ON storage.objects FOR DELETE USING ( bucket_id = 'product-images' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN') );
 
 
 -- -------------------------------------------------------------------------
