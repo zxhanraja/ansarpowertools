@@ -22,6 +22,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+  // Lock body scroll when mobile menu is open
+  React.useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const isActive = (path: string) => location.pathname === path ? 'text-orange-500' : 'text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400';
 
   const scrollToProducts = () => {
@@ -132,9 +144,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </nav>
 
       {/* Improved Mobile Menu Overlay - Moved outside nav for better stacking */}
-      <div className={`fixed inset-0 bg-gray-900/80 backdrop-blur-xl z-[100] transition-opacity duration-500 lg:hidden ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}>
+      <div className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] transition-opacity duration-500 lg:hidden ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}>
         <div
-          className={`absolute right-0 top-0 h-full w-[300px] sm:w-[350px] bg-white dark:bg-gray-950 shadow-[0_0_50px_rgba(0,0,0,0.3)] transition-transform duration-500 ease-out p-8 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-[100dvh] w-[300px] sm:w-[350px] bg-white dark:bg-gray-950 shadow-[0_0_50px_rgba(0,0,0,0.3)] transition-transform duration-500 ease-out p-8 flex flex-col z-[101] ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
           onClick={e => e.stopPropagation()}
         >
           <div className="flex justify-between items-center mb-10 pb-6 border-b border-gray-100 dark:border-gray-800">
@@ -229,8 +241,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 to="/admin"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-4 p-5 rounded-2xl transition-all border shadow-sm ${location.pathname === '/admin'
-                    ? 'bg-orange-600 text-white border-orange-500'
-                    : 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/30 hover:bg-orange-100'
+                  ? 'bg-orange-600 text-white border-orange-500'
+                  : 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/30 hover:bg-orange-100'
                   }`}
               >
                 <div className={`p-2 rounded-xl ${location.pathname === '/admin' ? 'bg-white/20' : 'bg-white dark:bg-gray-800'}`}>
